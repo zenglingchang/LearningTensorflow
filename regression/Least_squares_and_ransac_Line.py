@@ -18,11 +18,16 @@ def drawCircle(r, n, bias):
 def drawLine(k,b,n,bias):
     _x = np.linspace(0,100,n).tolist()
     _y = [x*k+b+np.random.normal(-bias,bias)for x in _x]
-    for i in range(len(_x)/5):
+    for i in range(int(len(_x)/5)):
         _y.append(randint(0,100))
         _x.append(randint(0,100))
     return _x,_y
-
+    
+def sin_line():
+    setX = np.linspace(0, 100, 10)
+    setY = [50*math.sin(2*np.pi*x/100) + np.random.normal(0,12) for x in setX]
+    return setX,setY
+    
 # A function return w0 + w1*x + w2*w^2 +....+ wn-1*w^n-1
 def f(x, w, n):
     result = 0
@@ -31,7 +36,7 @@ def f(x, w, n):
     return result
     
 # function of Least_Squares x: featrue data  y: target data n: power times of featrue
-def Least_Squares(x,y,n): 
+def Least_Squares(x,y,n,l_2=0): 
     
     # initialize
     A = []
@@ -42,8 +47,15 @@ def Least_Squares(x,y,n):
     A = mat(A)
     Y = mat(Y)
     
+    # Add l2_norm
+    temp = A.T*A
+    for i in range(n):
+        temp[i,i]+=l_2
+        
     # mat function to solute the Least_Squares question
-    return (A.T*A).I*A.T*Y 
+    w = temp.I*A.T*Y
+    loss = (A*w-Y)
+    return w,sum(loss.T*loss)/len(x)
     
 # mincnt means minsize of set of random points 
 # maxItercnt means times of traverse 
@@ -67,7 +79,7 @@ def ransacLine(setX, setY, mincnt, maxIterCnt, maxErrorThreshold, n):
         randindesetX = np.random.choice(len(setX), mincnt,replace=False)
         randset_X = [setX[i] for i in randindesetX]
         randset_Y = [setY[i] for i in randindesetX]
-        w = Least_Squares(randset_X, randset_Y,n)
+        w,NoUse = Least_Squares(randset_X, randset_Y,n)
         
         # count size of consensus point
         for i in range(len(setX)):
@@ -80,23 +92,36 @@ def ransacLine(setX, setY, mincnt, maxIterCnt, maxErrorThreshold, n):
         if tempcon_size > consensus_size:
             bestfit = w
             consensus_size = tempcon_size
-            loss = temp_loss
+            loss = temp_loss/len(setX)
             
     return bestfit,loss
     
     
 if __name__ == "__main__":
-    n=2
-    setX,setY = drawLine(0.6,5,300,4)
-    w = Least_Squares(setX,setY,n)
-    w1,loss = ransacLine(setX,setY,4,100,5,n)
-    print(w1)
-    print(loss)
+    # tcase = int(input().strip())
+    # setX = []
+    # setY = []
+    # for case in range(tcase):
+        # point = list(map(int, input().strip().split()))
+        # setX.append(point[0])
+        # setY.append(point[1])
+    setX,setY = sin_line()
+    n=9
+    # setX,setY = drawLine(0.6,5,300,4)
+    w,loss = Least_Squares(setX,setY,n)
+    w1,loss1 = ransacLine(setX,setY,9,100,2,n)
+    if w1[1,0]>0:
+        b = math.sqrt(1/(1+w1[1,0]**2))
+    else:
+        b = -math.sqrt(1/(1+w1[1,0]**2))
+    a = w1[1,0]*b
+    c = w1[0,0]*b
+    print("{:.6f} {:.6f} {:.6f}".format(a,b,c))
     x = np.linspace(0,100,100)
-    print(w)
     y = [f(i,w,n) for i in x]
     _y = [f(i,w1,n) for i in x]
     plt.scatter(setX,setY)
     plt.plot(x, y, 'g')
     plt.plot(x, _y, 'r')
     plt.show()
+    

@@ -13,7 +13,6 @@ def load_file(file_name):
     return training_data,testing_data
     
 class SVM:
-    
     def __init__(self):
     
 
